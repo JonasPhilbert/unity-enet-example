@@ -7,55 +7,69 @@ using Net;
 
 public class NetServer : ITicked
 {
-    public event Action<ENet.Event> OnClientConnected;
-    public event Action<ENet.Event> OnClientDisconnected;
-    public event Action<ENet.Event> OnClientTimeout;
+    public event Action OnClientConnected;
+    public event Action OnClientDisconnected;
+    public event Action OnClientTimeout;
     public event Action<Cmd> OnCmd;
 
-    public Host ENetClient { get { return client; } }
-
-    private Host client;
+    private Host enet;
     public void Start()
     {
-        client = new Host();
+        enet = new Host();
         Address address = new Address();
         address.Port = 7777;
-        client.Create(address, 64);
+        enet.Create(address, 64);
+    }
+    public void BroadcastCmd(Cmd cmd)
+    {
+        Packet packet = default(Packet);
+
+        packet.Create(cmd.payload);
+        enet.Broadcast(0, ref packet);
     }
 
     public void Tick()
     {
         ENet.Event netEvent;
-        if (client.CheckEvents(out netEvent) <= 0)
+        if (enet.CheckEvents(out netEvent) <= 0)
         {
-            client.Service(0, out netEvent); // 0 timeout to not block Unity thread.
+            enet.Service(0, out netEvent); // 0 timeout to not block Unity thread.
         }
         switch (netEvent.Type)
         {
             case ENet.EventType.None:
                 break;
             case ENet.EventType.Connect:
-                Debug.Log($"Peer {netEvent.Peer.ID}/{netEvent.Peer.IP} connected.");
-                OnClientConnected.Invoke(netEvent);
+                Log($"Client connected to server.");
+                //OnClientConnected.Invoke();
                 break;
             case ENet.EventType.Disconnect:
-                Debug.Log($"Peer {netEvent.Peer.ID}/{netEvent.Peer.IP} disconnected.");
-                OnClientDisconnected.Invoke(netEvent);
+                Log($"Client disconnected from server.");
+                //OnClientDisconnected.Invoke();
                 break;
             case ENet.EventType.Timeout:
-                Debug.Log($"Peer {netEvent.Peer.ID}/{netEvent.Peer.IP} timed out.");
+                Log($"Client timed out of server.");
+                //OnClientTimeout.Invoke();
                 break;
             case ENet.EventType.Receive:
-                Debug.Log($"Packet received from peer {netEvent.Peer.ID}/{netEvent.Peer.IP} on channel {netEvent.ChannelID} with length {netEvent.Packet.Length}.");
+                Log($"Packet received from client on channel {netEvent.ChannelID} with length {netEvent.Packet.Length}.");
+                Cmd cmd = NetParser.ParsePacket(netEvent);
+                //OnCmd.Invoke(cmd);
+                BroadcastCmd(cmd);
                 netEvent.Packet.Dispose();
                 break;
         }
 
-        client.Flush();
+        enet.Flush();
+    }
+
+    private void Log(string msg)
+    {
+        Debug.Log($"[SERVER] {msg}");
     }
 
     ~NetServer()
     {
-        client.Dispose();
+        enet.Dispose();
     }
 }
