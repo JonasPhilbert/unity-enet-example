@@ -9,6 +9,9 @@ namespace Net
     {
         INVALID = 0,
         POSITION = 1,
+        REQUEST_JOIN = 2,
+        CONFIRM_JOIN = 3,
+        PLAYER_JOINED = 4,
     }
 
     public struct Cmd
@@ -32,7 +35,7 @@ namespace Net
         {
             uint peerId = netEvent.Peer.ID;
             byte cmdType = Marshal.ReadByte(netEvent.Packet.Data);
-            byte[] buffer = new byte[1024];
+            byte[] buffer = new byte[netEvent.Packet.Length];
             Marshal.Copy(netEvent.Packet.Data, buffer, 1, netEvent.Packet.Length - 1);
 
             return new Cmd
@@ -41,6 +44,18 @@ namespace Net
                 cmdType = cmdType,
                 payload = buffer,
             };
+        }
+
+        public static Packet PreparePacket(Cmd cmd)
+        {
+            byte[] payload = new byte[cmd.payload.Length + 1];
+            payload[0] = cmd.cmdType;
+            Array.Copy(cmd.payload, 0, payload, 1, cmd.payload.Length);
+
+            Packet packet = default(Packet);
+            packet.Create(payload);
+
+            return packet;
         }
     }
 

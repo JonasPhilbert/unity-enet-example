@@ -4,6 +4,7 @@ using UnityEngine;
 using ENet;
 using System;
 using Net;
+using System.Runtime.InteropServices;
 
 public class NetClient : ITicked {
     public event Action OnConnected;
@@ -30,7 +31,10 @@ public class NetClient : ITicked {
         if (server is null) throw new Exception("Attempting to send cmd when not connected to server.");
 
         Packet packet = default(Packet);
-        packet.Create(cmd.payload);
+        byte[] payload = new byte[cmd.payload.Length + 1];
+        payload[0] = (byte)cmd.cmdType;
+        Array.Copy(cmd.payload, 0, payload, 1, cmd.payload.Length);
+        packet.Create(payload);
         server.Value.Send(0, ref packet);
     }
 
@@ -47,7 +51,7 @@ public class NetClient : ITicked {
                 break;
             case ENet.EventType.Connect:
                 Log($"Connected to server.");
-                //OnConnected.Invoke();
+                OnConnected.Invoke();
                 break;
             case ENet.EventType.Disconnect:
                 Log($"Disconnected from server.");

@@ -18,13 +18,40 @@ namespace Net
         private string inputHostname => inputHostnameElement.text;
         private NetServer server;
         private NetClient client;
+        private ushort plyIdCursor = 0;
 
         public void StartServer()
         {
             print($"Starting server.");
             server = new NetServer();
             server.Start();
+            server.OnCmd += Server_OnCmd;
             ConnectPeer("127.0.0.1");
+        }
+
+        private void Server_OnCmd(Cmd cmd)
+        {
+            switch ((CmdType)cmd.cmdType)
+            {
+                case CmdType.REQUEST_JOIN:
+                    byte[] payload = new byte[2];
+                    BitWriter writer = new(payload);
+                    writer.WriteUInt16(++plyIdCursor);
+                    Cmd confirmCmd = new Cmd
+                    {
+                        cmdType = (byte)CmdType.CONFIRM_JOIN,
+                        payload = payload,
+                    };
+                    server.SendCmd(confirmCmd, cmd.peerId);
+
+                    Cmd joinCmd = new Cmd
+                    {
+                        cmdType = (byte)CmdType.PLAYER_JOINED,
+                        payload = payload,
+                    };
+                    server.BroadcastCmd(joinCmd, cmd.peerId);
+                    break;
+            }
         }
 
         public void ConnectPeer(string hostname)
@@ -38,19 +65,36 @@ namespace Net
             client = new NetClient();
             client.Connect(hostname);
             client.OnCmd += Client_OnCmd;
+            client.OnConnected += Client_OnConnected;
         }
 
         private void Client_OnCmd(Cmd cmd)
         {
-            switch (cmd.cmdType)
+            switch ((CmdType)cmd.cmdType)
             {
-                case (byte)CmdType.INVALID:
+                case CmdType.INVALID:
                     break;
-                case (byte)CmdType.POSITION:
+                case CmdType.POSITION:
                     NetworkGame.instance.InCmdPosition(cmd);
+                    break;
+                case CmdType.CONFIRM_JOIN:
+                    NetworkGame.instance.InCmdConfirmJoin(cmd);
+                    break;
+                case CmdType.PLAYER_JOINED:
+                    NetworkGame.instance.InCmdPlayerJoined(cmd);
                     break;
             }
         }
+        private void Client_OnConnected()
+        {
+            Cmd joinCmd = new Cmd
+            {
+                cmdType = (byte)CmdType.REQUEST_JOIN,
+                payload = new byte[] { 42 }, // We have to send something. In the future, maybe some client information, like player name.
+            };
+            SendCmdToServer(joinCmd);
+        }
+
         public void SendCmdToServer(Cmd cmd)
         {
             client.SendCmd(cmd);
