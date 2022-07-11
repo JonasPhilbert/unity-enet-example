@@ -125,6 +125,8 @@ namespace Net
 
         private void OnDestroy()
         {
+            server = null;
+            client = null;
             ENet.Library.Deinitialize();
         }
     }

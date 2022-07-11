@@ -394,8 +394,7 @@ PrefabInstance:
       propertyPath: m_Name
       value: NetworkManager
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 758379185, guid: 92432e91748657a4db02c2e6d48e897b, type: 3}
+    m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 92432e91748657a4db02c2e6d48e897b, type: 3}
 --- !u!1 &496154540
 GameObject:
@@ -482,9 +481,9 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 758379183}
-        m_TargetAssemblyTypeName: NetworkManager, Assembly-CSharp
+        m_TargetAssemblyTypeName: Net.NetworkManager, Assembly-CSharp
         m_MethodName: ConnectPeer
-        m_Mode: 1
+        m_Mode: 5
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
